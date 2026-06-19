@@ -2,14 +2,16 @@ package unlar.edu.ar.ecoride_parcial.model;
 
 public class BicicletaElectrica extends Vehiculo {
 
-    private double capacidadCanasto; // en centímetros cúbicos
+    private int capacidadCanasto;
+    private double capacidadBateria;
 
-    public BicicletaElectrica(String patente, int bateria, double tarifaBase, double capacidadCanasto) {
-        super(patente, bateria, tarifaBase);
+    public BicicletaElectrica(String patente, int porcentajeBateria, double tarifaBase,
+                               int capacidadCanasto, double capacidadBateria) {
+        super(patente, porcentajeBateria, tarifaBase);
         this.capacidadCanasto = capacidadCanasto;
+        this.capacidadBateria = capacidadBateria;
     }
 
-    public double getCapacidadCanasto() {
-        return capacidadCanasto;
-    }
+    public int getCapacidadCanasto() { return capacidadCanasto; }
+    public double getCapacidadBateria() { return capacidadBateria; }
 }

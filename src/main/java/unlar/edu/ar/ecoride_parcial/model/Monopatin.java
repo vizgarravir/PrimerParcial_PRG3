@@ -2,14 +2,16 @@ package unlar.edu.ar.ecoride_parcial.model;
 
 public class Monopatin extends Vehiculo {
 
-    private boolean amortiguacionReforzada;
+    private boolean tenenciaUnica;
+    private boolean duranteReparacion;
 
-    public Monopatin(String patente, int bateria, double tarifaBase, boolean amortiguacionReforzada) {
-        super(patente, bateria, tarifaBase);
-        this.amortiguacionReforzada = amortiguacionReforzada;
+    public Monopatin(String patente, int porcentajeBateria, double tarifaBase, boolean tenenciaUnica) {
+        super(patente, porcentajeBateria, tarifaBase);
+        this.tenenciaUnica = tenenciaUnica;
+        this.duranteReparacion = false;
     }
 
-    public boolean isAmortiguacionReforzada() {
-        return amortiguacionReforzada;
-    }
+    public boolean isTenenciaUnica() { return tenenciaUnica; }
+    public boolean isDuranteReparacion() { return duranteReparacion; }
+    public void setDuranteReparacion(boolean duranteReparacion) { this.duranteReparacion = duranteReparacion; }
 }

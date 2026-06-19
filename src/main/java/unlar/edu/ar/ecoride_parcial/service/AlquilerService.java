@@ -1,68 +1,54 @@
 package unlar.edu.ar.ecoride_parcial.service;
 
-import unlar.edu.ar.ecoride_parcial.dto.*;
-import unlar.edu.ar.ecoride_parcial.exception.*;
-import unlar.edu.ar.ecoride_parcial.model.*;
-import unlar.edu.ar.ecoride_parcial.pagos.ProcesadorPago;
-import unlar.edu.ar.ecoride_parcial.pagos.ProcesadorPagoFactory;
 import org.springframework.stereotype.Service;
+import unlar.edu.ar.ecoride_parcial.dto.AlquilerFinalizadoDTO;
+import unlar.edu.ar.ecoride_parcial.model.Vehiculo;
+import unlar.edu.ar.ecoride_parcial.repositorio.EstacionAnclaje;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class AlquilerService {
 
-    private List<Usuario> usuarios;
-    private EstacionAnclaje estacion;
+    private final EstacionAnclaje estacion;
+    // Guarda el tiempo de inicio del viaje: patente -> milliseconds
+    private final Map<String, Long> viajesActivos = new HashMap<>();
 
-    public AlquilerService() {
-        usuarios = new ArrayList<>();
-        estacion = new EstacionAnclaje("Estación Central");
-
-        // Datos de prueba
-        usuarios.add(new UsuarioRegular(1, "Juan Pérez"));
-        usuarios.add(new UsuarioPremium(2, "María García", 0.15));
-
-        estacion.agregarVehiculo(new Monopatin("ABC123", 80, 500.0, true));
-        estacion.agregarVehiculo(new BicicletaElectrica("XYZ789", 10, 400.0, 1500.0));
-        estacion.agregarVehiculo(new Monopatin("DEF456", 60, 450.0, false));
+    public AlquilerService(EstacionAnclaje estacion) {
+        this.estacion = estacion;
     }
 
-    public AlquilerResponseDTO desbloquear(AlquilerRequestDTO request) {
+    public void desbloquearVehiculo(String patente) {
+        Vehiculo v = obtenerVehiculoOFallar(patente);
+        v.iniciarViaje();
+        viajesActivos.put(patente, System.currentTimeMillis());
+    }
 
-        // 1. Localizar el vehículo en la estación por patente
-        Vehiculo vehiculo = estacion.buscarPorPatente(request.getPatente());
+    public AlquilerFinalizadoDTO finalizarAlquiler(String patente, int minutos) {
+        Vehiculo v = obtenerVehiculoOFallar(patente);
 
-        // 2. Validar batería >= 15%
-        if (vehiculo.getBateria() < 15) {
-            throw new BateriaInsuficienteException("Batería Insuficiente");
-        }
+        long tiempoMs = viajesActivos.getOrDefault(patente, System.currentTimeMillis());
+        long tiempoTranscurrido = minutos > 0 ? minutos
+                : (System.currentTimeMillis() - tiempoMs) / 60000;
 
-        // 3. Buscar usuario y calcular importe con posible descuento
-        Usuario usuario = buscarUsuarioPorId(request.getIdUsuario());
-        double montoFinal = usuario.aplicarDescuento(vehiculo.getTarifaBase());
+        double costo = v.calcularTarifa((int) tiempoTranscurrido);
+        v.finalizarViaje();
+        viajesActivos.remove(patente);
 
-        // 4. Obtener procesador de pago via Factory
-        ProcesadorPago procesador = ProcesadorPagoFactory.obtener(request.getMetodoPago());
-
-        // 5. Efectuar el cobro
-        procesador.cobrar(montoFinal);
-
-        // 6. Retornar respuesta exitosa
-        return new AlquilerResponseDTO(
-                vehiculo.getPatente(),
-                montoFinal,
-                "Vehículo desbloqueado con éxito"
+        return new AlquilerFinalizadoDTO(
+                patente,
+                costo,
+                tiempoTranscurrido,
+                v.getEstado().getNombre()
         );
     }
 
-    private Usuario buscarUsuarioPorId(int id) {
-        for (Usuario u : usuarios) {
-            if (u.getId() == id) {
-                return u;
-            }
+    private Vehiculo obtenerVehiculoOFallar(String patente) {
+        Vehiculo v = estacion.buscarPorPatente(patente);
+        if (v == null) {
+            throw new IllegalArgumentException("Vehículo no encontrado: " + patente);
         }
-        throw new RuntimeException("Usuario no encontrado con id: " + id);
+        return v;
     }
 }
